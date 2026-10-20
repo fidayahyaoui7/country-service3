@@ -7,7 +7,7 @@ pipeline {
     stages {
         stage('Checkout code') {
             steps {
-                git branch: 'main', url: 'https://github.com/RihabFattani/Country-service.git'
+                git branch: 'main', url: 'https://github.com/fidayahyaoui7/country-service3.git'
             }
         }
         stage('Compile, test, package') {
