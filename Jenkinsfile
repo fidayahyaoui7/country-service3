@@ -25,6 +25,10 @@ pipeline {
                 withSonarQubeEnv('MySonarQubeServer') {
                     sh 'mvn sonar:sonar -Dsonar.projectKey=country-service -Dsonar.projectName=country-service'
                 }
+                 stage('display message ') {
+            steps {
+                echo 'Hello from Git'
+            }
             }
         }
         stage('Deploy jar to Nexus') {
