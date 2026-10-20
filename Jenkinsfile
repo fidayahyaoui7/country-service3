@@ -50,7 +50,7 @@ pipeline {
         stage('Deploy jar to Nexus') {
             when { expression { env.NEXUS_READY == 'true' } }
             steps {
-                withCredentials([usernamePassword(credentialsId: 'nexus-creds', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
+                withCredentials([usernamePassword(credentialsId: 'nexus-credentials', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
                     sh 'mvn deploy -DskipTests -s settings.xml'
                 }
             }
