@@ -8,7 +8,7 @@ pipeline {
 
     environment {
         // Mettre 'true' quand Nexus est installé et configuré
-        NEXUS_READY = 'false'
+        NEXUS_READY = 'true'
         NEXUS_URL   = 'http://localhost:8081'
     }
 
