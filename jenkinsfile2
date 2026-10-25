@@ -21,14 +21,14 @@ pipeline {
 
         stage('Build Dockerfile') {
             steps {
-                sh 'docker build . -t my-country-service:$BUILD_NUMBER'
+                sh 'docker build . -t my-country-service3:$BUILD_NUMBER'
 
                 withCredentials([string(credentialsId: 'dockerhub-pwd', variable: 'dockerhubpwd')]) {
-                    sh 'docker login -u jamina2305 -p ${dockerhubpwd}'
+                    sh 'docker login -u fidayahyaoui -p ${dockerhubpwd}'
                 }
 
-                sh 'docker tag my-country-service:$BUILD_NUMBER jamina2305/my-country-service:$BUILD_NUMBER'
-                sh 'docker push jamina2305/my-country-service:$BUILD_NUMBER'
+                sh 'docker tag my-country-service3:$BUILD_NUMBER fidayahyaoui/my-country-service:$BUILD_NUMBER'
+                sh 'docker push fidayahyaoui/my-country-service:$BUILD_NUMBER'
             }
         }
 
