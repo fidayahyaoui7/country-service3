@@ -1,0 +1,42 @@
+pipeline {
+    agent any
+
+    tools {
+        maven 'M2_HOME'
+    }
+
+    stages {
+
+        stage('Checkout code') {
+            steps {
+                git branch: 'master', url: 'https://github.com/fidayahyaoui7/country-service3.git'
+            }
+        }
+
+        stage('Build maven') {
+            steps {
+                sh 'mvn clean install'
+            }
+        }
+
+        stage('Build Dockerfile') {
+            steps {
+                sh 'docker build . -t my-country-service:$BUILD_NUMBER'
+
+                withCredentials([string(credentialsId: 'dockerhub-pwd', variable: 'dockerhubpwd')]) {
+                    sh 'docker login -u jamina2305 -p ${dockerhubpwd}'
+                }
+
+                sh 'docker tag my-country-service:$BUILD_NUMBER jamina2305/my-country-service:$BUILD_NUMBER'
+                sh 'docker push jamina2305/my-country-service:$BUILD_NUMBER'
+            }
+        }
+
+        stage('Deploy micro-service') {
+            steps {
+                sh 'docker rm -f $(docker ps -aq)'
+                sh 'docker run -d -p 8082:8082 my-country-service:$BUILD_NUMBER'
+            }
+        }
+    }
+}
