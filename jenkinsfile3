@@ -1,0 +1,41 @@
+pipeline {
+    agent any
+    tools {
+        maven 'M2-HOME'
+    }
+    stages {
+        stage('Checkout code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/fidayahyaoui7/country-service3'
+            }
+        }
+
+        stage('Build Maven') {
+            steps {
+                sh 'mvn clean install'
+            }
+        }
+
+        stage('Build Dockerfile') {
+            steps {
+                sh 'docker build . -t my-country-service3:$BUILD_NUMBER'
+                withCredentials([string(credentialsId: 'dockerhubpwd', variable: 'dockerhubpwd')]) {
+                    sh 'docker login -u fidayahyaoui -p ${dockerhubpwd}'
+                }
+                sh 'docker tag my-country-service3:$BUILD_NUMBER fidayahyaoui/my-country-service3:$BUILD_NUMBER'
+                sh 'docker push fidayahyaoui/my-country-service3:$BUILD_NUMBER'
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    kubeconfig(credentialsId: 'kubeconfig-file', serverUrl: '') {
+                        sh 'kubectl apply -f deployment.yaml'
+                        sh 'kubectl apply -f service.yaml'
+                    }
+                }
+            }
+        }
+    }
+}
