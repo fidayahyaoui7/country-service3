@@ -9,7 +9,7 @@
 
   vars:
     image_name: my-country-service3
-    image_tag: "7"
+    image_tag: "8"
     dockerfile_path: "./"
     host_port: 8085
     container_port: 8082
@@ -22,23 +22,36 @@
         password: "{{ dockerhub_password }}"
         reauthorize: yes
 
-    - name: Build Docker image
-      community.docker.docker_image:
-        build:
-          path: "{{ dockerfile_path }}"
-        name: "{{ dockerhub_username }}/{{ image_name }}"
-        tag: "{{ image_tag }}"
-        source: build
-        state: present
+    - name: Build Docker image without cache
+      ansible.builtin.command:
+        argv:
+          - docker
+          - build
+          - --no-cache
+          - --pull
+          - -t
+          - "{{ dockerhub_username }}/{{ image_name }}:{{ image_tag }}"
+          - "{{ dockerfile_path }}"
+      register: docker_build
 
-    - name: Push Docker image to Docker Hub
-      community.docker.docker_image:
-        name: "{{ dockerhub_username }}/{{ image_name }}"
-        tag: "{{ image_tag }}"
-        push: yes
-        source: local
+    - name: Display Docker build result
+      ansible.builtin.debug:
+        var: docker_build.stdout_lines
 
-    - name: Deploy the container
+    - name: Push new image to Docker Hub
+      ansible.builtin.command:
+        argv:
+          - docker
+          - push
+          - "{{ dockerhub_username }}/{{ image_name }}:{{ image_tag }}"
+      register: docker_push
+      changed_when: true
+
+    - name: Display Docker push result
+      ansible.builtin.debug:
+        var: docker_push.stdout_lines
+
+    - name: Stop and replace old container
       community.docker.docker_container:
         name: country-service
         image: "{{ dockerhub_username }}/{{ image_name }}:{{ image_tag }}"
@@ -48,3 +61,17 @@
         restart_policy: always
         ports:
           - "{{ host_port }}:{{ container_port }}"
+
+    - name: Verify running container
+      ansible.builtin.command:
+        argv:
+          - docker
+          - ps
+          - --filter
+          - name=country-service
+      register: container_status
+      changed_when: false
+
+    - name: Display container status
+      ansible.builtin.debug:
+        var: container_status.stdout_lines
