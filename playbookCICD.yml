@@ -1,11 +1,11 @@
 ---
 - name: Build and Deploy Docker Image to Kubernetes
-  hosts: localhost # Or your build/deployment server
+  hosts: localhost 
   connection: local
 
   vars:
     image_name: my-country-service3
-    image_tag: 7
+    image_tag: "7"
     dockerfile_path: './'
     docker_registry_username: fidayahyaoui
     docker_registry_password: dckr_pat_r4N31yvpR01JjZIOF-Wjwutmd7E
