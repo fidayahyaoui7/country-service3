@@ -13,8 +13,8 @@
   tasks:
     - name: Log in to Docker Hub
       community.docker.docker_login:
-        username: fidayahyaoui
-        password: fidayh2020
+         username: "{{ docker_registry_username }}"
+        password: "{{ docker_registry_password }}"
         reauthorize: yes
 
     - name: Build Docker image
