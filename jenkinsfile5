@@ -24,7 +24,7 @@ pipeline {
             sh '''
                 trap 'rm -f vault_pass.txt' EXIT
                 echo "$VAULT_PASS" > vault_pass.txt
-                ansible-playbook -i hosts playbookCICD.yml --vault-password-file vault_pass.txt
+                ansible-playbook -i hosts playbookCICD1.yml --vault-password-file vault_pass.txt
             '''
         }
     }
