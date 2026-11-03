@@ -1,0 +1,41 @@
+pipeline {
+    agent any
+    tools {
+        jdk 'JDK21'
+        maven 'M2_HOME'
+    }
+    stages {
+
+        stage('Checkout code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/fidayahyaoui7/country-service3.git'
+            }
+        }
+
+        stage('Build maven') {
+            steps {
+                sh 'mvn clean install'
+            }
+        }
+
+        stage('Deploy using Ansible playbook') {
+            steps {
+                script {
+                    sh 'ansible-playbook -i hosts playbookCICD.yml'
+                }
+            }
+        }
+    }
+    post {
+        always {
+            // Clean up or perform post-build actions
+            cleanWs()
+        }
+        success {
+            echo 'Ansible playbook executed successfully!'
+        }
+        failure {
+            echo 'Ansible playbook execution failed!'
+        }
+    }
+}
