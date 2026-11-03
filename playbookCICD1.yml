@@ -36,12 +36,13 @@
         push: yes
         source: local
 
-    - name: Deploy the container
-      community.docker.docker_container:
-        name: country-service3
-        image: "{{ dockerhub_username }}/{{ image_name }}:{{ image_tag }}"
-        state: started
-        recreate: yes
-        restart_policy: always
-        ports:
-          - "{{ host_port }}:{{ container_port }}"
+   - name: Deploy the container
+  community.docker.docker_container:
+    name: country-service
+    image: "{{ dockerhub_username }}/{{ image_name }}:{{ image_tag }}"
+    image_name_mismatch: recreate
+    state: started
+    recreate: yes
+    restart_policy: always
+    ports:
+      - "{{ host_port }}:{{ container_port }}"
