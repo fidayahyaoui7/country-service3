@@ -1,0 +1,44 @@
+pipeline {
+    agent any
+    tools {
+        jdk 'JDK21'
+        maven 'M2_HOME'
+    }
+    stages {
+
+        stage('Checkout code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/fidayahyaoui7/country-service3.git'
+            }
+        }
+
+        stage('Build maven') {
+            steps {
+                sh 'mvn clean install'
+            }
+        }
+
+        stage('Deploy using Ansible playbook') {
+    steps {
+        withCredentials([string(credentialsId: 'ansible_vault_pass', variable: 'VAULT_PASS')]) {
+            sh '''
+                trap 'rm -f vault_pass.txt' EXIT
+                echo "$VAULT_PASS" > vault_pass.txt
+                ansible-playbook -i hosts playbookCICD.yml --vault-password-file vault_pass.txt
+            '''
+        }
+    }
+}
+    post {
+        always {
+            // Clean up or perform post-build actions
+            cleanWs()
+        }
+        success {
+            echo 'Ansible playbook executed successfully!'
+        }
+        failure {
+            echo 'Ansible playbook execution failed!'
+        }
+    }
+}
