@@ -1,19 +1,22 @@
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: my-country-service3
+  name: my-country-service-deployment
 spec:
-  replicas: 3
+  replicas: 2
   selector:
     matchLabels:
-      app: country-service3
+      app: country-service
   template:
     metadata:
       labels:
-        app: country-service3
+        app: country-service
     spec:
       containers:
-      - name: country-service3-container
-        image: fidayahyaoui/my-country-service3:7
-        ports:
-        - containerPort: 8081
+        - name: country-service
+          image: fidayahyaoui/my-country-service3:8
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8082
+              protocol: TCP
