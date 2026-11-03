@@ -1,4 +1,12 @@
-FROM eclipse-temurin:21-jdk-jammy
-VOLUME /tmp
-COPY target/*.jar app.jar
-ENTRYPOINT ["java", "-jar", "/app.jar"]
+
+FROM eclipse-temurin:21-jre
+
+WORKDIR /app
+
+COPY target/country-service-0.0.1-SNAPSHOT.jar app.jar
+
+EXPOSE 8082
+
+ENV SERVER_PORT=8082
+
+ENTRYPOINT ["java", "-jar", "app.jar"]
