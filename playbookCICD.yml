@@ -1,6 +1,6 @@
 ---
-- name: Build and Deploy Docker Image to Kubernetes
-  hosts: localhost 
+- name: Build and Deploy Docker Container
+  hosts: localhost
   connection: local
 
   vars:
@@ -9,6 +9,8 @@
     dockerfile_path: './'
     docker_registry_username: fidayahyaoui
     docker_registry_password: dckr_pat_vuiNXD68dj1dqb8rLRNyMUVKDDc
+    host_port: 8085
+    container_port: 8080
 
   tasks:
     - name: Log in to Docker Hub
@@ -20,7 +22,7 @@
     - name: Build Docker image
       docker_image:
         build:
-          path: './'
+          path: "{{ dockerfile_path }}"
         name: "{{ docker_registry_username }}/{{ image_name }}:{{ image_tag }}"
         source: build
         state: present
@@ -33,22 +35,12 @@
         push: yes
         source: local
 
-    - name: Pull Docker image (optional, for verification or on target nodes)
-      docker_image:
-        name: "{{ docker_registry_username }}/{{ image_name }}:{{ image_tag }}"
-        tag: "{{ image_tag }}"
-        source: pull
-
-    - name: Apply Kubernetes Deployment
-      kubernetes.core.k8s:
-        state: present
-        namespace: jenkins
-        src: deployment.yaml
-        kubeconfig: config
-
-    - name: Apply Kubernetes Service
-      kubernetes.core.k8s:
-        state: present
-        namespace: jenkins
-        src: service.yaml
-        kubeconfig: config
+    - name: Deploy the container
+      community.docker.docker_container:
+        name: country-service
+        image: "{{ docker_registry_username }}/{{ image_name }}:{{ image_tag }}"
+        state: started
+        recreate: yes
+        restart_policy: always
+        ports:
+          - "{{ host_port }}:{{ container_port }}"
