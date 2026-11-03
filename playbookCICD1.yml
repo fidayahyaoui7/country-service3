@@ -11,7 +11,7 @@
     image_tag: "7"
     dockerfile_path: './'
     host_port: 8085
-    container_port: 8080
+    container_port: 8082
 
   tasks:
     - name: Log in to Docker Hub
