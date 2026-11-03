@@ -1,0 +1,47 @@
+---
+- name: Build and Deploy Docker Container
+  hosts: localhost
+  connection: local
+
+  vars_files:
+    - vault.yml
+
+  vars:
+    image_name: my-country-service3
+    image_tag: "7"
+    dockerfile_path: './'
+    host_port: 8085
+    container_port: 8080
+
+  tasks:
+    - name: Log in to Docker Hub
+      community.docker.docker_login:
+        username: "{{ dockerhub_username }}"
+        password: "{{ dockerhub_password }}"
+        reauthorize: yes
+
+    - name: Build Docker image
+      docker_image:
+        build:
+          path: "{{ dockerfile_path }}"
+        name: "{{ dockerhub_username }}/{{ image_name }}:{{ image_tag }}"
+        source: build
+        state: present
+        tag: "{{ image_tag }}"
+
+    - name: Push the Docker image to Docker Hub
+      docker_image:
+        name: "{{ dockerhub_username }}/{{ image_name }}:{{ image_tag }}"
+        tag: "{{ image_tag }}"
+        push: yes
+        source: local
+
+    - name: Deploy the container
+      community.docker.docker_container:
+        name: country-service
+        image: "{{ dockerhub_username }}/{{ image_name }}:{{ image_tag }}"
+        state: started
+        recreate: yes
+        restart_policy: always
+        ports:
+          - "{{ host_port }}:{{ container_port }}"
