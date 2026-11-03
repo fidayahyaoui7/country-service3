@@ -21,10 +21,7 @@ pipeline {
         stage('Deploy using Ansible playbook') {
             steps {
                 script {
-                    sh '''
-                        python3 -m pip install --user --break-system-packages kubernetes
-                        ansible-playbook -i hosts playbookCICD.yml
-'''
+                    sh 'ansible-playbook -i hosts playbookCICD.yml'
                 }
             }
         }
