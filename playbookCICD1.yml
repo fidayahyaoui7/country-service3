@@ -38,7 +38,7 @@
 
     - name: Deploy the container
       community.docker.docker_container:
-        name: country-service
+        name: country-service3
         image: "{{ dockerhub_username }}/{{ image_name }}:{{ image_tag }}"
         state: started
         recreate: yes
