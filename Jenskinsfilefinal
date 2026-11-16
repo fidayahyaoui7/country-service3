@@ -97,14 +97,13 @@ pipeline {
         }
 
         stage('Verify monitoring (Prometheus)') {
-    steps {
-        sh '''
-          curl -sG "http://<IP_PROMETHEUS>:9090/api/v1/query" \
-            --data-urlencode 'query=up' | tee /tmp/prom.json
-          grep -q '"status":"success"' /tmp/prom.json
-        '''
-    }
-}
+            steps {
+                sh '''
+                    curl -sG "$PROMETHEUS_URL/api/v1/query" \
+                      --data-urlencode 'query=up' | tee /tmp/prom.json
+                    grep -q '"status":"success"' /tmp/prom.json
+                '''
+            }
         }
     }
 
