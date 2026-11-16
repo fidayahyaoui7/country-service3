@@ -1,46 +1,42 @@
 ---
-- name: Build and Deploy Docker Container
+- name: Build, push et deploiement de country-service3
   hosts: localhost
   connection: local
-
+  gather_facts: false
+  vars_files:
+    - vault.yml
   vars:
-    image_name: my-country-service3
-    image_tag: "7"
-    dockerfile_path: './'
-    docker_registry_username: fidayahyaoui
-    docker_registry_password: dckr_pat_vuiNXD68dj1dqb8rLRNyMUVKDDc
-    host_port: 8085
-    container_port: 8080
+    image_name: "fidayahyaoui/my-country-service3"
+    image_tag: "v{{ lookup('env', 'BUILD_NUMBER') | default('latest', true) }}"
+    workdir: "{{ lookup('env', 'WORKSPACE') | default(playbook_dir, true) }}"
 
   tasks:
-    - name: Log in to Docker Hub
-      community.docker.docker_login:
-        username: "{{ docker_registry_username }}"
-        password: "{{ docker_registry_password }}"
-        reauthorize: yes
+    - name: Construire l'image Docker
+      ansible.builtin.command: docker build -t {{ image_name }}:{{ image_tag }} .
+      args:
+        chdir: "{{ workdir }}"
 
-    - name: Build Docker image
-      docker_image:
-        build:
-          path: "{{ dockerfile_path }}"
-        name: "{{ docker_registry_username }}/{{ image_name }}:{{ image_tag }}"
-        source: build
-        state: present
-        tag: "{{ image_tag }}"
+    - name: Se connecter a Docker Hub (identifiants du vault)
+      ansible.builtin.shell: echo "$DP" | docker login -u "{{ docker_user }}" --password-stdin
+      environment:
+        DP: "{{ docker_pass }}"
+      no_log: true
 
-    - name: Push the Docker image to Docker Hub
-      docker_image:
-        name: "{{ docker_registry_username }}/{{ image_name }}:{{ image_tag }}"
-        tag: "{{ image_tag }}"
-        push: yes
-        source: local
+    - name: Pousser l'image sur Docker Hub
+      ansible.builtin.command: docker push {{ image_name }}:{{ image_tag }}
 
-    - name: Deploy the container
-      community.docker.docker_container:
-        name: country-service
-        image: "{{ docker_registry_username }}/{{ image_name }}:{{ image_tag }}"
-        state: started
-        recreate: yes
-        restart_policy: always
-        ports:
-          - "{{ host_port }}:{{ container_port }}"
+    - name: Appliquer deployment.yaml avec la nouvelle image
+      ansible.builtin.shell: sed "s|IMAGE_PLACEHOLDER|{{ image_name }}:{{ image_tag }}|" deployment.yaml | kubectl apply -f -
+      args:
+        chdir: "{{ workdir }}"
+
+    - name: Attendre que les 3 pods soient prets
+      ansible.builtin.command: kubectl rollout status deployment/my-country-service3 --timeout=180s
+
+    - name: Lister les pods
+      ansible.builtin.command: kubectl get pods -l app=country-service3
+      register: pods
+
+    - name: Afficher les pods
+      ansible.builtin.debug:
+        var: pods.stdout_lines
