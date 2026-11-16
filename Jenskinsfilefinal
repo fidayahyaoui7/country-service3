@@ -1,0 +1,117 @@
+pipeline {
+    agent any
+
+    tools {
+        jdk 'JDK21'
+        maven 'M2_HOME'
+    }
+
+    environment {
+        NEXUS_READY    = 'true'
+        NEXUS_URL      = 'http://localhost:8081'
+        PROMETHEUS_URL = 'http://localhost:9090'
+        APP_URL        = 'http://localhost:30007'
+    }
+
+    stages {
+
+        stage('Checkout code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/fidayahyaoui7/country-service3.git'
+            }
+        }
+
+        stage('Compile, test, package') {
+            steps {
+                sh 'mvn clean install'
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('MySonarQubeServer') {
+                    sh 'mvn clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=countryservice3 -Dsonar.projectName=countryservice3'
+                }
+            }
+        }
+
+        stage('Deploy jar to Nexus') {
+            when { expression { env.NEXUS_READY == 'true' } }
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'nexus-credentials', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
+                    sh 'mvn deploy -DskipTests -s settings.xml'
+                }
+            }
+        }
+
+        stage('Store reports in Nexus') {
+            when { expression { env.NEXUS_READY == 'true' } }
+            steps {
+                sh '''
+                    zip -r jacoco-report.zip target/site/jacoco
+                    zip -r surefire-reports.zip target/surefire-reports
+                '''
+                withCredentials([usernamePassword(credentialsId: 'nexus-credentials', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
+                    sh '''
+                        curl --fail -u "$NEXUS_USER:$NEXUS_PASS" --upload-file jacoco-report.zip \
+                          "$NEXUS_URL/repository/reports/countryservice3/$BUILD_NUMBER/jacoco-report.zip"
+                        curl --fail -u "$NEXUS_USER:$NEXUS_PASS" --upload-file surefire-reports.zip \
+                          "$NEXUS_URL/repository/reports/countryservice3/$BUILD_NUMBER/surefire-reports.zip"
+                    '''
+                }
+            }
+        }
+
+        stage('Docker + Ansible : build, push, deploy K8s') {
+            steps {
+                withCredentials([
+                    string(credentialsId: 'ansible_vault_pass', variable: 'VAULT_PASS'),
+                    file(credentialsId: 'kubeconfig-file', variable: 'KUBECONFIG')
+                ]) {
+                    sh '''
+                        trap 'rm -f .vault_pass' EXIT
+                        printf '%s' "$VAULT_PASS" > .vault_pass
+                        ansible-playbook playbookCICD.yml --vault-password-file .vault_pass
+                    '''
+                }
+            }
+        }
+
+        stage('Verify Swagger') {
+            steps {
+                sh '''
+                    for i in 1 2 3 4 5 6; do
+                      CODE=$(curl -s -o /dev/null -w "%{http_code}" $APP_URL/swagger-ui/index.html)
+                      echo "Swagger HTTP $CODE"
+                      [ "$CODE" = "200" ] && exit 0
+                      sleep 10
+                    done
+                    exit 1
+                '''
+            }
+        }
+
+        stage('Verify monitoring (Prometheus)') {
+            steps {
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    sh '''
+                        RESULT=$(curl -s -G "$PROMETHEUS_URL/api/v1/query" \
+                          --data-urlencode 'query=count(kube_pod_info{pod=~"my-country-service3.*"})')
+                        echo "$RESULT"
+                        echo "$RESULT" | grep -q '"3"]'
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success { echo 'Pipeline complet OK.' }
+        failure { echo 'Pipeline en echec : regarde le stage rouge dans Stage View.' }
+    }
+}
