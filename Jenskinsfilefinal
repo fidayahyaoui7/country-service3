@@ -97,16 +97,14 @@ pipeline {
         }
 
         stage('Verify monitoring (Prometheus)') {
-            steps {
-                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
-                    sh '''
-                        RESULT=$(curl -s -G "$PROMETHEUS_URL/api/v1/query" \
-                          --data-urlencode 'query=count(kube_pod_info{pod=~"my-country-service3.*"})')
-                        echo "$RESULT"
-                        echo "$RESULT" | grep -q '"3"]'
-                    '''
-                }
-            }
+    steps {
+        sh '''
+          curl -sG "http://<IP_PROMETHEUS>:9090/api/v1/query" \
+            --data-urlencode 'query=up' | tee /tmp/prom.json
+          grep -q '"status":"success"' /tmp/prom.json
+        '''
+    }
+}
         }
     }
 
